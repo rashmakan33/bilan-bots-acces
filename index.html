@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bilan des bots</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+  /* Layout: one reading column, summary first, then tables; wide tables scroll inside their own box. */
+  :root {
+    --bg: #f6f7f5; --panel: #ffffff; --fg: #1b2420; --muted: #5d6a63; --line: #dde3df;
+    --accent: #2f6b55; --ok: #1f7a4d; --bad: #b3261e; --warn: #9a6200; --grid: #e7ece9;
+    --s1: #2f6b55; --s2: #3b6fb6; --s3: #b06a1f; --s4: #7a4fa3; --s5: #b03a5b; --s6: #4d8c8c; --s7: #6b7a2a;
+    --serif: "IBM Plex Serif", Georgia, serif; --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #121715; --panel: #1a211e; --fg: #e5ebe7; --muted: #9aa8a0; --line: #2c3631;
+    --accent: #7cc4a5; --ok: #5cc48c; --bad: #f08a80; --warn: #e2b155; --grid: #26302b;
+    --s1: #7cc4a5; --s2: #86aef0; --s3: #e4a35f; --s4: #b994e0; --s5: #ee8aa6; --s6: #7fc7c7; --s7: #b9c86a; color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #121715; --panel: #1a211e; --fg: #e5ebe7; --muted: #9aa8a0; --line: #2c3631;
+    --accent: #7cc4a5; --ok: #5cc48c; --bad: #f08a80; --warn: #e2b155; --grid: #26302b;
+    --s1: #7cc4a5; --s2: #86aef0; --s3: #e4a35f; --s4: #b994e0; --s5: #ee8aa6; --s6: #7fc7c7; --s7: #b9c86a; color-scheme: dark }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--sans); font-variant-numeric: tabular-nums; }
+  main { max-width: 72rem; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 40px; }
+  h1 { font: 400 2.1rem/1.15 var(--serif); margin: 0; text-wrap: balance; }
+  h2 { font: 500 1.15rem/1.3 var(--sans); margin: 0; }
+  .head { display: grid; gap: 8px; max-width: 48rem; }
+  .sub, .note { color: var(--muted); font-size: 0.85rem; margin: 0; max-width: 52rem; }
+  .lead { margin: 0; font-size: 1.02rem; }
+  .tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 4px; align-content: start; }
+  .tile .label { font-size: 0.8rem; color: var(--muted); letter-spacing: 0.02em; }
+  .tile .num { font: 400 1.9rem/1.1 var(--serif); }
+  .tile .hint { font-size: 0.8rem; color: var(--muted); }
+  section { display: grid; gap: 10px; min-width: 0; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-size: 0.85rem; color: var(--muted); }
+  select { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; max-width: 100%; }
+  select:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
+  th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; white-space: nowrap; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .name { font-weight: 500; }
+  .small { display: block; color: var(--muted); max-width: 28rem; }
+  .pill { display: inline-block; padding: 0 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); } .mute { color: var(--muted); }
+  .mono { font-family: var(--mono); font-size: 0.75rem; }
+  .chart { position: relative; min-height: 260px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  .chart svg { display: block; width: 100%; height: auto; }
+  .chart text { fill: var(--muted); font: 12px var(--sans); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; list-style: none; margin: 8px 0 0; padding: 0; font-size: 0.8rem; color: var(--muted); }
+  .legend li { display: flex; align-items: center; gap: 6px; }
+  .legend i { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+  .tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 4px 16px rgb(0 0 0 / 0.15); border-radius: 6px; padding: 4px 8px; font-size: 0.8rem; white-space: nowrap; }
+  .files { display: flex; flex-wrap: wrap; gap: 8px; }
+  .files a { color: var(--accent); border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 6px 10px; text-decoration: none; font-size: 0.85rem; }
+  .files a:hover { border-color: var(--accent); }
+  details summary { cursor: pointer; }
+  dl { display: grid; gap: 4px 16px; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr); font-size: 0.85rem; margin: 10px 0 0; }
+  dt { font-weight: 500; } dd { margin: 0; color: var(--muted); }
+  .error { color: var(--bad); }
+  .lock { max-width: 26rem; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: grid; gap: 12px; }
+  .lock label { font-weight: 500; }
+  .lock input[type=password] { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; }
+  .lock input:focus-visible, .lock button:focus-visible, .files button:focus-visible, .lock-out:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .lock .check { display: flex; gap: 8px; align-items: center; font-weight: 400; font-size: 0.85rem; color: var(--muted); }
+  .lock button, .files button { font: inherit; cursor: pointer; border-radius: 6px; padding: 8px 14px; }
+  .lock button { background: var(--accent); color: var(--bg); border: 0; font-weight: 500; justify-self: start; }
+  .lock button:disabled { opacity: 0.6; cursor: wait; }
+  .files button { color: var(--accent); border: 1px solid var(--line); background: var(--panel); font-size: 0.85rem; }
+  .files button:hover { border-color: var(--accent); }
+  .contenu { display: grid; gap: 40px; }
+  .lock-out { justify-self: start; font: inherit; font-size: 0.8rem; color: var(--muted); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; }
+  @media (max-width: 34rem) { dl { grid-template-columns: 1fr; } h1 { font-size: 1.7rem; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="head">
+    <h1>Bilan des bots</h1>
+    <p class="sub">Bots de paris en <strong>argent fictif</strong> sur Kalshi et Polymarket (et deux tests crypto). Aucun vrai pari n’est passé.<span id="releve-ligne" hidden> Relevé du <span id="releve">…</span> (heure UTC), mis à jour chaque soir.</span></p>
+    <p class="lead" id="lead" hidden></p>
+  </header>
+
+  <form class="lock" id="lock" autocomplete="on">
+    <p class="note">Page privée : les résultats sont chiffrés. Entrez le mot de passe que vous a transmis la personne qui vous a donné ce lien.</p>
+    <label for="mdp">Mot de passe</label>
+    <input type="password" id="mdp" name="password" autocomplete="current-password" required>
+    <label class="check" for="souvenir"><input type="checkbox" id="souvenir" checked> Se souvenir sur cet appareil</label>
+    <button type="submit" id="ouvrir">Ouvrir</button>
+    <p class="note error" id="lock-err" role="alert" hidden></p>
+  </form>
+
+  <div class="contenu" id="contenu" hidden>
+  <button type="button" class="lock-out" id="oublier">Oublier le mot de passe sur cet appareil</button>
+
+  <div class="tiles" aria-label="Chiffres clés">
+    <div class="tile"><span class="label">Bots en marche</span><span class="num" id="t-marche">—</span><span class="hint" id="t-marche-h"></span></div>
+    <div class="tile"><span class="label">Paris terminés, bots en marche</span><span class="num" id="t-paris">—</span><span class="hint">depuis le début de chaque test</span></div>
+    <div class="tile"><span class="label">Gain fictif, bots en marche</span><span class="num" id="t-gain">—</span><span class="hint">en dollars fictifs</span></div>
+    <div class="tile"><span class="label">Perte fictive des bots arrêtés</span><span class="num" id="t-arretes">—</span><span class="hint">avant leur arrêt</span></div>
+  </div>
+
+  <section id="bots">
+    <h2>Chaque bot</h2>
+    <p class="note"><b>Rendement</b> = gain ÷ argent misé. <b>Preuve t</b> mesure si le résultat dépasse le hasard : au-dessus de 2 le gain est probablement réel, sous −2 la perte l’est, entre les deux on ne peut pas encore conclure. Il faut au moins 30 paris terminés pour un verdict.</p>
+    <div class="controls"><label for="filtre">Afficher</label>
+      <select id="filtre"><option value="">Tous les bots</option><option value="en marche">En marche</option><option value="arrêté">Arrêtés</option></select>
+    </div>
+    <div class="wrap"><table>
+      <thead><tr><th>Bot</th><th>Statut</th><th class="n">Terminés</th><th class="n">Réussite</th><th class="n">Prix moyen</th><th class="n">Gain fictif</th><th class="n">Rendement</th><th class="n">Preuve t</th><th>Verdict</th><th class="n">En cours</th></tr></thead>
+      <tbody id="table-bots"></tbody>
+    </table></div>
+  </section>
+
+  <section id="courbe">
+    <h2>Gain cumulé jour par jour, bots en marche</h2>
+    <p class="note">Chaque point est le gain fictif cumulé à la fin d’un jour, compté le jour où les paris se terminent. Une courbe qui monte régulièrement vaut mieux qu’une seule grosse journée.</p>
+    <div class="chart" id="chart"></div>
+  </section>
+
+  <section id="regle">
+    <h2>Favoris Kalshi : ancienne règle contre règle sévère</h2>
+    <p class="note">Depuis le 15 novembre 2026, une offre sur un favori ne compte comme servie que si le prix passe sous le nôtre. L’ancienne règle comptait 89 % des offres servies, plus que dans la réalité. Ce sont les chiffres de la règle sévère qui comptent pour juger.</p>
+    <div class="wrap"><table>
+      <thead><tr><th>Bot</th><th>Règle</th><th class="n">Terminés</th><th class="n">En cours</th><th class="n">Gain fictif</th><th class="n">Rendement</th></tr></thead>
+      <tbody id="table-regles"></tbody>
+    </table></div>
+  </section>
+
+  <section id="paris">
+    <h2>Les paris d’un bot</h2>
+    <p class="note">Les 150 derniers paris du bot choisi, terminés ou en cours. Tous les paris de tous les bots sont dans le fichier CSV plus bas.</p>
+    <div class="controls"><label for="choix">Bot</label><select id="choix"></select></div>
+    <div class="wrap"><table>
+      <thead><tr><th>Fin</th><th>Pari</th><th>Type</th><th class="n">Prix</th><th class="n">Mise</th><th>Résultat</th><th class="n">Gain</th><th>Détail</th></tr></thead>
+      <tbody id="table-paris"></tbody>
+    </table></div>
+  </section>
+
+  <section id="jalons">
+    <h2>Prochains bilans</h2>
+    <div class="wrap"><table>
+      <thead><tr><th>Date</th><th>Bot</th><th>Objectif</th><th>Question à trancher</th></tr></thead>
+      <tbody id="table-jalons"></tbody>
+    </table></div>
+  </section>
+
+  <section id="donnees">
+    <h2>Données brutes</h2>
+    <p class="note">Les trois fichiers qui alimentent cette page, à ouvrir dans Excel, Google Sheets ou un outil d’analyse. Séparateur : virgule, encodage UTF-8.</p>
+    <div class="files">
+      <button type="button" data-file="bots.csv">bots.csv · une ligne par bot</button>
+      <button type="button" data-file="paris.csv">paris.csv · un pari par ligne</button>
+      <button type="button" data-file="jalons.csv">jalons.csv · calendrier des bilans</button>
+    </div>
+  </section>
+
+  <details>
+    <summary>Comment lire ces chiffres</summary>
+    <dl>
+      <dt>Argent fictif</dt><dd>Chaque bot simule ses paris sur les vrais prix du moment, sans jamais passer d’ordre réel.</dd>
+      <dt>Favoris Kalshi</dt><dd>Le bot pose une offre d’achat sur le camp favori (80 à 95 ¢) et attend qu’un vendeur la prenne. Il gagne un peu, très souvent, et perd toute la mise quand le favori perd.</dd>
+      <dt>Combinés</dt><dd>Plusieurs favoris réunis en un seul pari, qui ne gagne que si tous gagnent.</dd>
+      <dt>Écarts</dt><dd>Le même événement acheté des deux côtés, sur Kalshi et sur Polymarket. « Couvert » : un seul côté paie, comme prévu. « Perdu des deux côtés » : les deux paris n’étaient pas identiques.</dd>
+      <dt>Copie des spécialistes</dt><dd>Le bot recopie les nouveaux achats de portefeuilles Polymarket qui ont gagné de façon régulière par le passé.</dd>
+      <dt>Prix moyen</dt><dd>Prix payé par contrat, de 0 à 1 $. À 0,88 $, il faut gagner plus de 88 % des paris pour ne pas perdre.</dd>
+      <dt>Preuve t</dt><dd>Gain moyen par pari divisé par son incertitude. Au-delà de 2 (ou en dessous de −2), le résultat a peu de chances d’être dû au hasard.</dd>
+      <dt>Colonnes de paris.csv</dt><dd><span class="mono">bot_id, plateforme, statut, date, ouvert_le, titre, type, prix, mise_usd, gain_usd, resultat, regle, detail</span></dd>
+    </dl>
+  </details>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+(() => {
+  const blank = v => v === '' || v === null || v === undefined;
+  const num = v => (blank(v) ? NaN : +v);
+  const money = v => (Number.isFinite(v) ? (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $' : '—');
+  const pct = v => (Number.isFinite(v) ? (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' %' : '—');
+  const usd = v => (Number.isFinite(v) ? v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 3 }) + ' $' : '—');
+  const sign = v => (v > 0 ? 'n ok' : v < 0 ? 'n bad' : 'n');
+  const dayFmt = d3.utcFormat('%d/%m'), dateFmt = d3.utcFormat('%d/%m/%Y');
+  const $ = id => document.getElementById(id);
+  const cell = (tr, text, cls) => { const td = tr.insertCell(); td.textContent = text; if (cls) td.className = cls; return td; };
+  const COLORS = ['--s1', '--s2', '--s3', '--s4', '--s5', '--s6', '--s7'].map(c => `var(${c})`);
+  const VERDICT = { 'gagnant prouvé': 'ok', 'perdant prouvé': 'bad', 'négatif, pas encore prouvé': 'warn', 'données perdues': 'bad' };
+  const STATUS = { 'en marche': 'ok', 'arrêté': 'mute', 'en attente': 'warn' };
+  const RESULT = { 'gagné': 'ok', 'couvert': 'ok', 'perdu': 'bad', 'perdu des deux côtés': 'bad', 'en cours': 'mute' };
+  // ---- Unlocking: data.enc.json is AES-GCM encrypted, its key derived from the password (PBKDF2, see tools/chiffrer-bilan.mjs). ----
+  const STORE_KEY = 'bilan-mdp';
+  const b64 = text => Uint8Array.from(atob(text), c => c.charCodeAt(0));
+  const store = {
+    get() { try { return localStorage.getItem(STORE_KEY); } catch { return null; } },
+    set(value) { try { localStorage.setItem(STORE_KEY, value); } catch { /* private window: not remembered */ } },
+    clear() { try { localStorage.removeItem(STORE_KEY); } catch { /* nothing stored */ } }
+  };
+  let lockedFile = null;
+  async function lockedData() {
+    if (!lockedFile) {
+      const response = await fetch(`data.enc.json?v=${Date.now()}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Fichier de données introuvable (${response.status}). Réessayez dans un instant.`);
+      lockedFile = await response.json();
+    }
+    return lockedFile;
+  }
+  async function unlock(password) {
+    const locked = await lockedData();
+    const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt: b64(locked.salt), iterations: locked.iterations }, material, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    let plain;
+    try {
+      plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(locked.iv) }, key, b64(locked.data));
+    } catch {
+      throw new Error('Mot de passe incorrect.');
+    }
+    return JSON.parse(new TextDecoder().decode(plain));
+  }
+  function show(files) {
+    $('lock').hidden = true;
+    $('contenu').hidden = false;
+    $('lead').hidden = false;
+    $('releve-ligne').hidden = false;
+    document.querySelectorAll('.files button').forEach(button => {
+      button.addEventListener('click', () => {
+        const url = URL.createObjectURL(new Blob(['\ufeff' + files[button.dataset.file]], { type: 'text/csv;charset=utf-8' }));
+        const link = document.createElement('a'); link.href = url; link.download = button.dataset.file;
+        document.body.append(link); link.click(); link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      });
+    });
+    render(d3.csvParse(files['bots.csv']), d3.csvParse(files['paris.csv']), d3.csvParse(files['jalons.csv']));
+  }
+  async function attempt(password, remember) {
+    const button = $('ouvrir'), err = $('lock-err');
+    button.disabled = true; button.textContent = 'Ouverture…'; err.hidden = true;
+    try {
+      const files = await unlock(password);
+      if (remember) store.set(password);
+      show(files);
+      return true;
+    } catch (error) {
+      err.textContent = error.message; err.hidden = false;
+      return false;
+    } finally {
+      button.disabled = false; button.textContent = 'Ouvrir';
+    }
+  }
+  $('lock').addEventListener('submit', event => { event.preventDefault(); attempt($('mdp').value, $('souvenir').checked); });
+  $('oublier').addEventListener('click', () => { store.clear(); location.reload(); });
+  // A link may carry the password after "#" (that part never reaches the server): used once, remembered on this
+  // device, then removed from the address bar.
+  const fromLink = decodeURIComponent(location.hash.slice(1));
+  if (fromLink) history.replaceState(null, '', location.pathname + location.search);
+  const saved = fromLink || store.get();
+  if (saved) attempt(saved, true).then(ok => { if (!ok && !fromLink) store.clear(); });
+
+  function render(bots, paris, jalons) {
+    const running = bots.filter(b => b.statut === 'en marche');
+    const stopped = bots.filter(b => b.statut === 'arrêté');
+    const sum = (list, f) => list.reduce((s, b) => s + (num(b[f]) || 0), 0);
+    const releve = bots[0]?.releve_le ? new Date(bots[0].releve_le) : null;
+    $('releve').textContent = releve ? d3.utcFormat('%d/%m/%Y à %H:%M')(releve) : '—';
+    const proven = bots.filter(b => b.verdict === 'gagnant prouvé');
+    const best = [...running].filter(b => num(b.paris_termines) > 0).sort((a, b) => num(b.gain_usd) - num(a.gain_usd))[0];
+    $('lead').textContent = `Sur ${bots.length} bots suivis, ${running.length} tournent encore. `
+      + (proven.length ? `${proven.length} ont prouvé un gain (preuve t ≥ 2) : ${proven.map(b => b.bot).join(', ')}.` : 'Aucun n’a encore prouvé qu’il gagne : les résultats positifs peuvent encore être de la chance.')
+      + (best ? ` Parmi ceux qui tournent, le meilleur est « ${best.bot} » (${money(num(best.gain_usd))}).` : '');
+    $('t-marche').textContent = running.length;
+    $('t-marche-h').textContent = `sur ${bots.length} bots suivis`;
+    $('t-paris').textContent = sum(running, 'paris_termines').toLocaleString('fr-FR');
+    const gain = sum(running, 'gain_usd');
+    $('t-gain').textContent = money(gain); $('t-gain').className = 'num ' + (gain >= 0 ? 'ok' : 'bad');
+    $('t-arretes').textContent = money(sum(stopped, 'gain_usd')); $('t-arretes').className = 'num mute';
+
+    const drawBots = () => {
+      const wanted = $('filtre').value;
+      const order = { 'en marche': 0, 'en attente': 1, 'arrêté': 2 };
+      const tbody = $('table-bots'); tbody.replaceChildren();
+      for (const b of d3.sort(bots.filter(b => !wanted || b.statut === wanted), b => order[b.statut] ?? 3, b => -num(b.gain_usd))) {
+        const tr = tbody.insertRow();
+        const name = tr.insertCell();
+        const strong = document.createElement('span'); strong.className = 'name'; strong.textContent = b.bot;
+        const small = document.createElement('span'); small.className = 'small'; small.textContent = `${b.plateforme} · ${b.note}`;
+        name.append(strong, small);
+        const st = tr.insertCell(); const pill = document.createElement('span'); pill.className = 'pill ' + (STATUS[b.statut] || ''); pill.textContent = b.statut; st.append(pill);
+        cell(tr, blank(b.paris_termines) ? '—' : (+b.paris_termines).toLocaleString('fr-FR'), 'n');
+        cell(tr, blank(b.taux_reussite_pct) ? '—' : (+b.taux_reussite_pct).toLocaleString('fr-FR') + ' %', 'n');
+        cell(tr, usd(num(b.prix_moyen)), 'n');
+        cell(tr, money(num(b.gain_usd)), sign(num(b.gain_usd)));
+        cell(tr, pct(num(b.rendement_pct)), sign(num(b.rendement_pct)));
+        cell(tr, blank(b.preuve_t) ? '—' : (+b.preuve_t).toLocaleString('fr-FR'), 'n');
+        cell(tr, b.verdict, VERDICT[b.verdict] || '');
+        cell(tr, blank(b.en_cours) ? '—' : b.en_cours, 'n');
+      }
+    };
+    $('filtre').addEventListener('change', drawBots);
+    drawBots();
+
+    // Rule comparison for the Kalshi favourite bots.
+    const names = new Map(bots.map(b => [b.bot_id, b.bot]));
+    const tbR = $('table-regles');
+    const kalshi = paris.filter(p => p.regle === 'ancienne' || p.regle === 'sévère');
+    const groups = d3.sort([...d3.group(kalshi, p => p.bot_id, p => p.regle)].flatMap(([bot, m]) => [...m].map(([regle, list]) => ({ bot, regle, list }))), g => g.bot, g => (g.regle === 'sévère' ? 0 : 1));
+    for (const g of groups) {
+      const done = g.list.filter(p => p.statut === 'terminé');
+      const staked = d3.sum(done, p => +p.mise_usd), net = d3.sum(done, p => +p.gain_usd);
+      const tr = tbR.insertRow();
+      cell(tr, names.get(g.bot) || g.bot, 'name');
+      cell(tr, g.regle, g.regle === 'sévère' ? 'ok' : 'mute');
+      cell(tr, done.length.toLocaleString('fr-FR'), 'n');
+      cell(tr, (g.list.length - done.length).toLocaleString('fr-FR'), 'n');
+      cell(tr, done.length ? money(net) : '—', done.length ? sign(net) : 'n');
+      cell(tr, done.length ? pct(staked ? (100 * net) / staked : NaN) : 'pas encore de résultat', done.length ? sign(net) : 'n mute');
+    }
+
+    // Bets of one bot.
+    const choix = $('choix');
+    const withBets = bots.filter(b => paris.some(p => p.bot_id === b.bot_id));
+    choix.replaceChildren(...withBets.map(b => new Option(b.bot + (b.statut === 'arrêté' ? ' (arrêté)' : ''), b.bot_id)));
+    const drawParis = () => {
+      const tbody = $('table-paris'); tbody.replaceChildren();
+      const list = d3.sort(paris.filter(p => p.bot_id === choix.value), p => (p.statut === 'en cours' ? 0 : 1), p => -(Date.parse(p.date || p.ouvert_le) || 0)).slice(0, 150);
+      if (!list.length) { const tr = tbody.insertRow(); cell(tr, 'Aucun pari pour ce bot.', 'mute').colSpan = 8; return; }
+      for (const p of list) {
+        const tr = tbody.insertRow();
+        cell(tr, p.date ? dayFmt(new Date(p.date)) : 'en cours');
+        cell(tr, p.titre);
+        cell(tr, (p.type || '') + (p.regle ? ' · ' + p.regle : ''), 'mute');
+        cell(tr, usd(num(p.prix)), 'n');
+        cell(tr, usd(num(p.mise_usd)), 'n');
+        cell(tr, p.resultat, RESULT[p.resultat] || '');
+        cell(tr, money(num(p.gain_usd)), blank(p.gain_usd) ? 'n' : sign(+p.gain_usd));
+        cell(tr, p.detail || '', 'mute');
+      }
+    };
+    choix.addEventListener('change', drawParis);
+    drawParis();
+
+    const tbJ = $('table-jalons');
+    for (const j of d3.sort(jalons, j => j.bilan_le)) {
+      const tr = tbJ.insertRow();
+      cell(tr, dateFmt(new Date(j.bilan_le)));
+      cell(tr, names.get(j.bot_id) || j.bot_id, 'name');
+      cell(tr, j.objectif);
+      cell(tr, j.question);
+    }
+
+    // Cumulative gain per running bot.
+    const series = running.map(b => {
+      const done = paris.filter(p => p.bot_id === b.bot_id && p.statut === 'terminé' && p.date);
+      let total = 0;
+      const points = d3.sort([...d3.rollup(done, l => ({ gain: d3.sum(l, p => +p.gain_usd), n: l.length }), p => p.date)], ([d]) => d)
+        .map(([d, v]) => { total += v.gain; return { date: new Date(d), v: total, gain: v.gain, n: v.n }; });
+      return { name: b.bot, points };
+    }).filter(s => s.points.length);
+    const drawChart = () => drawCumul($('chart'), series);
+    drawChart();
+    let width = $('chart').clientWidth;
+    new ResizeObserver(() => { if ($('chart').clientWidth !== width) { width = $('chart').clientWidth; drawChart(); } }).observe($('chart'));
+  }
+
+  function drawCumul(box, series) {
+    box.replaceChildren();
+    if (!series.length) { box.textContent = 'Pas encore de paris terminés.'; return; }
+    const W = Math.max(280, box.clientWidth - 24), H = 260;
+    const svg = d3.select(box).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Gain fictif cumulé jour par jour de chaque bot en marche');
+    const all = series.flatMap(s => s.points);
+    const y = d3.scaleLinear().domain(d3.extent([0, ...all.map(p => p.v)])).nice().range([H - 24, 8]);
+    const yAxis = svg.append('g').call(d3.axisLeft(y).ticks(5).tickFormat(v => v.toLocaleString('fr-FR') + ' $'));
+    let left = 0; yAxis.selectAll('text').each(function () { left = Math.max(left, this.getComputedTextLength()); });
+    left += 14; yAxis.attr('transform', `translate(${left},0)`);
+    yAxis.selectAll('line,path').style('stroke', 'var(--line)');
+    svg.append('g').selectAll('line').data(y.ticks(5)).join('line').attr('x1', left).attr('x2', W).attr('y1', d => y(d)).attr('y2', d => y(d)).style('stroke', 'var(--grid)');
+    const x = d3.scaleUtc().domain(d3.extent(all, p => p.date)).range([left + 24, W - 24]);
+    const xAxis = svg.append('g').attr('transform', `translate(0,${H - 24})`).call(d3.axisBottom(x).ticks(Math.max(2, Math.floor(W / 110))).tickFormat(d3.utcFormat('%d/%m')));
+    xAxis.selectAll('line,path').style('stroke', 'var(--line)');
+    svg.append('line').attr('x1', left).attr('x2', W).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--muted)').style('stroke-dasharray', '3 3');
+    const line = d3.line().x(p => x(p.date)).y(p => y(p.v));
+    series.forEach((s, i) => {
+      const color = COLORS[i % COLORS.length];
+      svg.append('path').datum(s.points).attr('d', line).style('fill', 'none').style('stroke', color).style('stroke-width', 2);
+      svg.append('g').selectAll('circle').data(s.points).join('circle').attr('cx', p => x(p.date)).attr('cy', p => y(p.v)).attr('r', 2.5).style('fill', color);
+    });
+    const legend = document.createElement('ul'); legend.className = 'legend';
+    series.forEach((s, i) => {
+      const li = document.createElement('li'); const sw = document.createElement('i'); sw.style.background = COLORS[i % COLORS.length];
+      const label = document.createElement('span'); label.textContent = `${s.name} (${money(s.points[s.points.length - 1].v)})`;
+      li.append(sw, label); legend.append(li);
+    });
+    box.append(legend);
+    const tip = document.createElement('div'); tip.className = 'tip'; tip.hidden = true; box.append(tip);
+    svg.on('pointermove', ev => {
+      const [mx, my] = d3.pointer(ev);
+      let best = null, dist = Infinity;
+      series.forEach(s => s.points.forEach(p => { const d = Math.hypot(x(p.date) - mx, y(p.v) - my); if (d < dist) { dist = d; best = { s, p }; } }));
+      if (!best || dist > 40) { tip.hidden = true; return; }
+      tip.textContent = `${best.s.name} · ${d3.utcFormat('%d/%m')(best.p.date)} : ${money(best.p.gain)} ce jour (${best.p.n} paris), cumul ${money(best.p.v)}`;
+      tip.hidden = false;
+      const scale = (box.clientWidth - 24) / W;
+      const px = 12 + x(best.p.date) * scale, py = 12 + y(best.p.v) * scale;
+      tip.style.left = Math.max(0, Math.min(box.clientWidth - tip.offsetWidth, px - tip.offsetWidth / 2)) + 'px';
+      tip.style.top = Math.max(0, py - tip.offsetHeight - 10) + 'px';
+    }).on('pointerleave', () => { tip.hidden = true; });
+  }
+})();
+</script>
+</body>
+</html>
