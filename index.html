@@ -77,6 +77,7 @@
   .files button { color: var(--accent); border: 1px solid var(--line); background: var(--panel); font-size: 0.85rem; }
   .files button:hover { border-color: var(--accent); }
   .contenu { display: grid; gap: 40px; }
+  #ia-texte { width: 100%; font: 0.75rem/1.4 var(--mono); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
   .lock-out { justify-self: start; font: inherit; font-size: 0.8rem; color: var(--muted); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; }
   @media (max-width: 34rem) { dl { grid-template-columns: 1fr; } h1 { font-size: 1.7rem; } }
 </style>
@@ -163,6 +164,18 @@
     </div>
   </section>
 
+  <section id="ia">
+    <h2>Analyser avec une IA</h2>
+    <p class="note">Une IA (ChatGPT, Claude, Gemini…) ne peut pas ouvrir cette page elle-même : les résultats y sont chiffrés. Donnez-lui plutôt l’un de ces deux contenus, qui expliquent aussi ce que signifient les colonnes.</p>
+    <div class="files">
+      <button type="button" id="ia-copier">Copier le résumé des bots</button>
+      <button type="button" id="ia-fichier">Télécharger le dossier complet (bilan-pour-ia.md)</button>
+    </div>
+    <p class="note" id="ia-etat" role="status"></p>
+    <textarea id="ia-texte" readonly hidden rows="8" aria-label="Résumé à copier pour une IA"></textarea>
+    <p class="note"><b>Résumé</b> : les 18 bots et le calendrier, quelques kilo-octets, à coller directement dans la conversation. <b>Dossier complet</b> : le résumé plus tous les paris un par un (environ 400 Ko), à joindre comme fichier dans la conversation.</p>
+  </section>
+
   <details>
     <summary>Comment lire ces chiffres</summary>
     <dl>
@@ -237,7 +250,53 @@
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       });
     });
+    setupAi(files);
     render(d3.csvParse(files['bots.csv']), d3.csvParse(files['paris.csv']), d3.csvParse(files['jalons.csv']));
+  }
+
+  // ---- A text an AI can read: what the data is, what each column means, then the CSV files. ----
+  const AI_INTRO = [
+    '# Bilan de bots de paris en argent fictif',
+    '',
+    'Ces données viennent de bots qui simulent des paris sur Kalshi et Polymarket (marchés de prédiction) avec de l’argent FICTIF : aucun vrai pari n’a été passé. Le but est de savoir lesquels seraient rentables avant d’y mettre de l’argent réel.',
+    '',
+    '## Familles de bots',
+    '- Favoris Kalshi : offre d’achat posée sur le camp favori (prix 0,80 à 0,95 $) en attendant un vendeur. Gagne un peu très souvent, perd toute la mise quand le favori perd. Depuis le 15/11/2026, la « règle sévère » ne compte une offre servie que si le prix passe sous la nôtre (colonne regle = sévère) ; l’ancienne règle était trop optimiste.',
+    '- Combinés : plusieurs favoris en un seul pari (gagne seulement si tous gagnent).',
+    '- Écarts Kalshi × Polymarket : le même événement acheté des deux côtés ; « couvert » = un seul côté paie comme prévu ; « perdu des deux côtés » = les deux paris n’étaient pas identiques.',
+    '- Copie des spécialistes (Polymarket) : recopie les nouveaux achats de portefeuilles qui ont gagné régulièrement.',
+    '- Élan et grok-trader : tests crypto, presque sans trades.',
+    '',
+    '## Colonnes',
+    '- bots.csv : une ligne par bot. statut (en marche / arrêté / en attente), paris_termines, gagnes, taux_reussite_pct, prix_moyen (prix payé par contrat, 0 à 1 $ : à 0,88 il faut gagner plus de 88 % des paris), mise_totale_usd, gain_usd, rendement_pct (gain ÷ mise), preuve_t (gain moyen par pari ÷ son erreur type ; au-delà de 2 ou sous −2 le résultat a peu de chances d’être du hasard), verdict, en_cours, releve_le (date du relevé, UTC).',
+    '- paris.csv : un pari par ligne. bot_id, plateforme, statut (terminé / en cours), date (jour de fin, UTC), ouvert_le, titre, type, prix, mise_usd, gain_usd (vide si en cours), resultat, regle, detail.',
+    '- jalons.csv : dates prévues pour juger chaque bot et la question à trancher.',
+    '',
+    '## Questions utiles',
+    '- Quels bots ont un avantage réel une fois les frais et la taille de l’échantillon pris en compte ?',
+    '- Le gain dépend-il du type de pari, du prix payé, du jour de la semaine ou du compte copié ?',
+    '- Les résultats sous la règle sévère confirment-ils ceux de l’ancienne règle ?',
+    '- Quelle mise (en % du capital) limiterait les pertes tout en gardant le gain ?',
+    ''
+  ].join('\n');
+  const block = (name, text) => `## ${name}\n\n\`\`\`csv\n${text.trim()}\n\`\`\`\n`;
+  function setupAi(files) {
+    const summary = [AI_INTRO, block('bots.csv', files['bots.csv']), block('jalons.csv', files['jalons.csv'])].join('\n');
+    const full = [summary, block('paris.csv', files['paris.csv'])].join('\n');
+    const state = $('ia-etat'), area = $('ia-texte');
+    $('ia-copier').addEventListener('click', () => {
+      const fallback = () => { area.value = summary; area.hidden = false; area.focus(); area.select(); state.textContent = 'La copie automatique n’a pas marché : le texte est sélectionné ci-dessous, faites Ctrl+C (ou un appui long, puis Copier).'; };
+      try {
+        navigator.clipboard.writeText(summary).then(() => { area.hidden = true; state.textContent = 'Résumé copié. Collez-le dans la conversation avec l’IA (Ctrl+V), puis posez votre question.'; }, fallback);
+      } catch { fallback(); }
+    });
+    $('ia-fichier').addEventListener('click', () => {
+      const url = URL.createObjectURL(new Blob([full], { type: 'text/markdown;charset=utf-8' }));
+      const link = document.createElement('a'); link.href = url; link.download = 'bilan-pour-ia.md';
+      document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      state.textContent = 'Fichier bilan-pour-ia.md téléchargé. Joignez-le à la conversation avec l’IA (trombone ou « ajouter un fichier »).';
+    });
   }
   async function attempt(password, remember) {
     const button = $('ouvrir'), err = $('lock-err');
